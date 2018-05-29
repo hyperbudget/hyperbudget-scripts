@@ -1,8 +1,13 @@
 import { ReportFactory, CSVParserManager } from "@hyperbudget/hyperbudget-core";
 import * as fs from 'fs';
 
+export type CSVFile = {
+  name: string;
+  type: string;
+};
+
 export class CSVFileManager {
-  static add_csvs(rf: ReportFactory, csvs: { name: string, type: string }[], idx: number = 0, records: any[] = []): Promise<any> {
+  static add_csvs(rf: ReportFactory, csvs: CSVFile[], idx: number = 0, records: any[] = []): Promise<any> {
     if (!csvs.length) {
       return Promise.resolve();
     }
