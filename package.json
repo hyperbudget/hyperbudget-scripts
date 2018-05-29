@@ -1,0 +1,30 @@
+{
+  "name": "hyperbudget-scripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "postinstall": "tsc && mkdir -p csvs/",
+  "dependencies": {
+    "@hyperbudget/hyperbudget-core": "^2.3.0",
+    "fs": "0.0.1-security",
+    "moment": "^2.22.1",
+    "node-getopt": "^0.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^10.1.3",
+    "@types/node-getopt": "^0.2.31"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperbudget/hyperbudget-scripts.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hyperbudget/hyperbudget-scripts/issues"
+  },
+  "homepage": "https://github.com/hyperbudget/hyperbudget-scripts#readme"
+}
