@@ -8,7 +8,8 @@
     "@hyperbudget/hyperbudget-core": "^2.3.0",
     "fs": "0.0.1-security",
     "moment": "^2.22.1",
-    "node-getopt": "^0.3.2"
+    "node-getopt": "^0.3.2",
+    "path": "^0.12.7"
   },
   "devDependencies": {
     "@types/node": "^10.1.3",
