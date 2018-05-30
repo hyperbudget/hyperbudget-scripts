@@ -48,8 +48,8 @@ const _calc_pct_diff = (a: number, b: number) => {
   return ( b - a ) / Math.abs(a) * 100;
 };
 
-const month_difference_report = (opt: Option): Promise<any> => {
-  return new Promise((resolve, reject) => {
+const prepare_reportfactory = (opt: Option): Promise<ReportFactory> => (
+ new Promise((resolve, reject) => {
     let csv_names: string[] = [
       opt.start.format('YYYYMM'),
       opt.start.clone().subtract(1, 'month').format('YYYYMM'),
@@ -72,54 +72,58 @@ const month_difference_report = (opt: Option): Promise<any> => {
 
     CSVFileManager.add_csvs(rf, csvs)
     .then(() => categoriser.categorise_transactions(rf.report.transactions))
-    .then(() => {
-      rf.report.filter_month(opt.start.format('YYYYMM'));
+    .then(() => resolve(rf))
+  })
+);
 
-      const transactions_before: Transaction[] = [... rf.report.transactions ];
-      rf.report.filter_month(opt.end.format('YYYYMM'));
-      const transactions_after: Transaction[] = [ ... rf.report.transactions ];
+const month_difference_report = (opt: Option, rf: ReportFactory): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    rf.report.filter_month(opt.start.format('YYYYMM'));
 
-      const before_gain = _sum_transaction_amounts(transactions_before);
-      const after_gain = _sum_transaction_amounts(transactions_after);
+    const transactions_before: Transaction[] = [...rf.report.transactions];
+    rf.report.filter_month(opt.end.format('YYYYMM'));
+    const transactions_after: Transaction[] = [...rf.report.transactions];
 
-      const before_general_exp = Math.abs(_sum_transaction_amounts(_filter_not_category(transactions_before, ['income', 'bills', 'rent'])));
-      const after_general_exp = Math.abs(_sum_transaction_amounts(_filter_not_category(transactions_after, ['income', 'bills', 'rent'])));
+    const before_gain = _sum_transaction_amounts(transactions_before);
+    const after_gain = _sum_transaction_amounts(transactions_after);
 
-      let return_report = {
-        start: {
-          gain: Utils.format_number(before_gain),
-          general_exp: Utils.format_number(before_general_exp),
-          categories: {},
-        },
-        end: {
-          gain: Utils.format_number(_sum_transaction_amounts(transactions_after)),
-          general_exp: Utils.format_number(after_general_exp),
-          categories: {},
-        },
-        diff: {
-          gain: Utils.format_number(after_gain - before_gain),
-          general_exp: Utils.format_number(Math.abs(after_general_exp) - Math.abs(before_general_exp)),
-          categories: { },
+    const before_general_exp = Math.abs(_sum_transaction_amounts(_filter_not_category(transactions_before, ['income', 'bills', 'rent'])));
+    const after_general_exp = Math.abs(_sum_transaction_amounts(_filter_not_category(transactions_after, ['income', 'bills', 'rent'])));
 
-          general_exp_pct: Utils.format_number(_calc_pct_diff(before_general_exp, after_general_exp)),
-          gain_pct:  Utils.format_number(_calc_pct_diff(before_gain, after_gain)),
-          categories_pct: { },
-        },
-      };
+    let return_report = {
+      start: {
+        gain: Utils.format_number(before_gain),
+        general_exp: Utils.format_number(before_general_exp),
+        categories: {},
+      },
+      end: {
+        gain: Utils.format_number(_sum_transaction_amounts(transactions_after)),
+        general_exp: Utils.format_number(after_general_exp),
+        categories: {},
+      },
+      diff: {
+        gain: Utils.format_number(after_gain - before_gain),
+        general_exp: Utils.format_number(Math.abs(after_general_exp) - Math.abs(before_general_exp)),
+        categories: {},
 
-      opt.report.category_ids.forEach((id: string) => {
-        let before = Math.abs(_sum_transaction_amounts(_filter_category(transactions_before, id)));
-        let after = Math.abs(_sum_transaction_amounts(_filter_category(transactions_after, id)));
+        general_exp_pct: Utils.format_number(_calc_pct_diff(before_general_exp, after_general_exp)),
+        gain_pct: Utils.format_number(_calc_pct_diff(before_gain, after_gain)),
+        categories_pct: {},
+      },
+    };
 
-        return_report.start.categories[id] = Utils.format_number(before);
-        return_report.end.categories[id] = Utils.format_number(after);
-        return_report.diff.categories[id] = Utils.format_number(after - before);
+    opt.report.category_ids.forEach((id: string) => {
+      let before = Math.abs(_sum_transaction_amounts(_filter_category(transactions_before, id)));
+      let after = Math.abs(_sum_transaction_amounts(_filter_category(transactions_after, id)));
 
-        return_report.diff.categories_pct[id] = Utils.format_number(_calc_pct_diff(before, after)) + "%";
-      });
+      return_report.start.categories[id] = Utils.format_number(before);
+      return_report.end.categories[id] = Utils.format_number(after);
+      return_report.diff.categories[id] = Utils.format_number(after - before);
 
-      resolve(return_report);
+      return_report.diff.categories_pct[id] = Utils.format_number(_calc_pct_diff(before, after)) + "%";
     });
+
+    resolve(return_report);
   });
 };
 
@@ -127,18 +131,24 @@ console.log(get_opt());
 
 ConfigManager.get_config()
 .then((config: SystemConfig) => {
-  month_difference_report({
+  const options = {
     ...get_opt(),
     categories: config.preferences.categories || [],
     report: config.preferences.report || { category_ids: [] },
-  })
-  .then((report) => {
-    console.log(report);
-    let { gain_pct, general_exp_pct, categories_pct } = report.diff;
+  };
 
-    console.log("In-out: ", gain_pct + "%"),
-    console.log("General expense:", general_exp_pct + "%");
-    console.log("Categories:", categories_pct);
-  });
+  prepare_reportfactory(options).then((rf: ReportFactory) => (
+    month_difference_report(
+      options,
+      rf
+    )
+    .then((report) => {
+      console.log(report);
+      let { gain_pct, general_exp_pct, categories_pct } = report.diff;
 
+      console.log("In-out: ", gain_pct + "%"),
+      console.log("General expense:", general_exp_pct + "%");
+      console.log("Categories:", categories_pct);
+    })
+  ));
 })
